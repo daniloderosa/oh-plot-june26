@@ -1,0 +1,1573 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>La Pausa - Office Break Game</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Source+Sans+3:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        min-height: 100%;
+      }
+      body {
+        font-family: "Space Grotesk", system-ui, sans-serif;
+        background: #efe7d6;
+        color: #1a1714;
+        -webkit-font-smoothing: antialiased;
+        zoom: 1.15;
+      }
+
+      @keyframes paBob {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-3px);
+        }
+      }
+      @keyframes paBlink {
+        0%,
+        92%,
+        100% {
+          transform: scaleY(1);
+        }
+        96% {
+          transform: scaleY(0.1);
+        }
+      }
+      @keyframes paStamp {
+        0% {
+          transform: scale(2.6) rotate(-22deg);
+          opacity: 0;
+        }
+        55% {
+          opacity: 1;
+        }
+        100% {
+          transform: scale(1) rotate(-8deg);
+          opacity: 1;
+        }
+      }
+      @keyframes paPulse {
+        0%,
+        100% {
+          opacity: 0.6;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+      ::-webkit-scrollbar {
+        height: 8px;
+        width: 8px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.18);
+        border-radius: 8px;
+      }
+
+      .start-btn:hover {
+        transform: translate(2px, 2px);
+        box-shadow: 2px 2px 0 #9a6a3a !important;
+      }
+      .break-btn:hover {
+        background: #fff !important;
+        transform: translateY(-2px);
+      }
+      .work-btn:hover {
+        opacity: 0.9;
+      }
+      .meter-fill {
+        height: 100%;
+        border-radius: 5px;
+        transition: width 0.35s;
+      }
+      .day-fill {
+        height: 100%;
+        background: #1a1714;
+        border-radius: 3px;
+        transition: width 0.3s;
+      }
+      @media (max-width: 768px) {
+        body {
+          zoom: 1;
+        }
+      }
+      @media (max-width: 700px) {
+        .ed-lower {
+          grid-template-columns: 1fr !important;
+        }
+        .ed-bars {
+          border-left: none !important;
+          padding-left: 0 !important;
+          border-top: 1px solid #d8cfb8;
+          padding-top: 18px;
+          margin-top: 6px;
+        }
+        .ed-mast {
+          flex-direction: column !important;
+          gap: 4px !important;
+          text-align: center;
+        }
+        .ed-mast > span {
+          flex: none !important;
+          text-align: center !important;
+        }
+        .ed-paper-name {
+          white-space: normal !important;
+          font-size: 24px !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div
+      id="vtip"
+      style="
+        position: fixed;
+        z-index: 9999;
+        pointer-events: none;
+        display: none;
+        background: #1a1714;
+        color: #eaf3ec;
+        border-radius: 6px;
+        padding: 10px 14px;
+        font-family: &quot;Space Grotesk&quot;, sans-serif;
+        font-size: 13px;
+        line-height: 1.5;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        max-width: 210px;
+        min-width: 160px;
+      "
+    ></div>
+    <script>
+      // ─── TRANSLATIONS ───────────────────────────────────────────────────────────
+      const T = {
+        it: {
+          challenge: "Oh, plot! · Una sfida di Plot Twist Dataviz Lab",
+          theme: "Giugno 2026",
+          heroTitle: "LA\nPAUSA",
+          heroBody:
+            "Una giornata in ufficio, dalle 9 alle 18. Lavora abbastanza da soddisfare il capo, ma concediti le pause che ti servono per non crollare. <b>Riposare non è un lusso.</b>",
+          card1Title: "Una giornata, 09→18",
+          card1Body:
+            "Solo oggi. Raggiungi l'obiettivo di lavoro entro le 18:00 - senza esaurirti per strada.",
+          card2Title: "Le pause fanno bene",
+          card2Body:
+            "Un caffè, due passi, una chiacchiera: recuperano energia e abbassano lo stress. Il capo non sempre capisce.",
+          card3Title: "Ogni pausa → un dato",
+          card3Body:
+            "A fine giornata le tue pause diventano una <b>dataviz verde</b>.",
+          startBtn: "Inizia la giornata →",
+          difficulty: "DIFFICOLTÀ",
+          diff_facile: "Facile",
+          diff_normale: "Normale",
+          diff_difficile: "Difficile",
+          // Tutorial
+          tutTitle: "Come si gioca",
+          tut1T: "⌨ LAVORA · 60 min",
+          tut1B:
+            "Avanza verso l'obiettivo giornaliero. Ogni sessione consuma energia e aumenta lo stress - ma soddisfa il capo.",
+          tut2T: "☕ Prenditi una pausa",
+          tut2B:
+            "Caffè, passeggiate, snack: recuperano energia e abbassano lo stress. Scegli bene quando e quale - il capo ha occhi ovunque.",
+          tut3T: "👀 Il capo si sposta",
+          tut3B:
+            "Dopo ogni azione il capo cambia posizione: <i>in riunione · alla scrivania · ti guarda</i>. Se ti vede in pausa, la disapprovazione sale di più.",
+          tut4T: "🏁 Come si vince (e si perde)",
+          tut4B:
+            "Vinci arrivando alle 18:00 con il lavoro completato. Perdi se l'energia crolla, lo stress esplode, il capo si stufa - o se le 18:00 arrivano troppo presto.",
+          letsGo: "Partiamo!",
+          // Play
+          meterE: "Energia",
+          meterS: "Stress",
+          meterD: "Disapprovaz. capo",
+          meterL: "Lavoro fatto",
+          bossAway: "☕ Il capo è in riunione altrove.",
+          bossNearby: "🪑 Il capo è alla sua scrivania.",
+          bossWatching: "👀 Il capo sta guardando verso di te.",
+          bossWatchBubble: "👀 tutto ok lì?",
+          bossTag: "IL CAPO",
+          youTag: "TU",
+          greenHint: "↑ là fuori c'è la vita",
+          workBtn: "⌨ LAVORA",
+          workMin: " · 60 min",
+          logTitle: "⊟ DIARIO DELLE PAUSE - i tuoi dati",
+          logEmpty:
+            "Ancora nessuna pausa.\nQuando te ne concedi una,\nfinisce qui.",
+          breakLabels: {
+            caffe: "Caffè",
+            passeggiata: "Passeggiata",
+            bagno: "Bagno",
+            chiacchiera: "Chiacchiera",
+            scroll: "Telefono",
+            snack: "Snack",
+          },
+          lunchLabel: "Pausa pranzo",
+          lunchReact:
+            "Un'ora per respirare. Il capo non conta le pause di mezza giornata.",
+          lunchMsg: "Pausa finita. Il pomeriggio comincia.",
+          // Over
+          overTime: "ORA",
+          overPause: "PAUSE",
+          overWork: "LAVORO",
+          overVizBtn: "🌱 Guarda la tua dataviz →",
+          overRestartBtn: "↺ Ricomincia la giornata",
+          over: {
+            survived: {
+              title: "CE L'HAI FATTA",
+              color: "#A6E22E",
+              bg: "#0E3B2E",
+              text: "Le 18:00. Obiettivo raggiunto restando interi - lavoro e pause, in equilibrio. Una giornata fatta come si deve.",
+            },
+            fired: {
+              title: "IL CAPO TI VUOLE PARLARE",
+              color: "#E0653A",
+              bg: "#1A1714",
+              text: 'Troppe assenze dalla scrivania. "Ho bisogno di sapere su chi posso contare", ti dice. La prossima volta, calibra meglio le pause - ma non rinunciarci.',
+            },
+            lowoutput: {
+              title: "IL CAPO TI VUOLE PARLARE",
+              color: "#E0653A",
+              bg: "#1A1714",
+              text: 'Sono le 18:00 e il lavoro è rimasto indietro. "Dobbiamo parlare dei tuoi obiettivi", dice. Le pause ci vogliono, ma l\'obiettivo va chiuso.',
+            },
+            burnout: {
+              title: "BURNOUT",
+              color: "#E8C547",
+              bg: "#241f12",
+              text: "Troppa pressione, troppo poco respiro. Il corpo ha staccato la spina. Le pause servivano davvero.",
+            },
+            collapse: {
+              title: "A TERRA",
+              color: "#56C2D6",
+              bg: "#12222a",
+              text: "Energia a zero. La tastiera ha vinto. Forse quello snack andava preso prima.",
+            },
+          },
+          // Viz
+          vizSub: "OH, PLOT! · GIUGNO 2026",
+          vizTitle: "Anatomia di una giornata",
+          vizDesc:
+            "Ogni pausa è una piccola creatura. Più scende, più tardi nel giorno.",
+          vizCount: "pause registrate.",
+          backGame: "← torna al gioco",
+          backResult: "← esito",
+          vizEmpty:
+            "Nessuna pausa da visualizzare ancora.\nTorna in ufficio e concediti un caffè. ☕",
+          legendTitle: "COME SI LEGGE",
+          legendBreaks: "TIPO DI PAUSA",
+          leg1: "Il cerchio centrale = <b>durata</b> della pausa",
+          leg2: "I <b>raggi</b> = energia ritrovata",
+          leg3: "L'<b>alone</b> = calma ritrovata",
+          leg4: "● il capo era sereno<br>○ il capo ha notato la pausa",
+          clockLabel: "ORA",
+          aboutBody:
+            '<b>Oh, plot!</b> è la sfida mensile di dataviz organizzata da <b>Plot Twist Dataviz Lab</b>.<br>La sfida di giugno 2026 ha come tema <b>"la pausa".</b>',
+          aboutCredit:
+            "Plot Twist Dataviz Lab è un progetto a guida femminile aperto a tutte e tutti",
+          aboutInsta: "Seguilo su Instagram",
+
+          ed: {
+            paper: "Il Corriere dell'Ufficio",
+            edition: "Edizione della sera",
+            chartTitle:
+              "L'energia scende, lo stress sale. Le pause invertono la rotta.",
+            chartSub:
+              "Livello di energia e stress (0-100) durante la giornata. Le bande viola segnano le pause, le grigie il lavoro, la più scura la pausa pranzo.",
+            legEnergy: "Energia",
+            legStress: "Stress",
+            legPause: "Pausa",
+            legWork: "Lavoro",
+            legLunch: "Pausa pranzo",
+            stripTitle: "Le pause, minuto per minuto",
+            stripNotNoticed: "pausa non notata",
+            stripNoticed: "pausa notata dal capo",
+            stripColor: "· il colore indica il tipo di pausa",
+            barsTitle: "Minuti per tipo di pausa",
+            statBreaks: "pause in tutto",
+            statMinutes: "minuti di stacco",
+            statSeen: "notate dal capo",
+            statExit: "orario di uscita",
+            annPeak: "Più energia recuperata",
+            annEnd: "fine giornata",
+            head: {
+              survived: "In piedi alle sei, dopo {n} pause",
+              fired: "Il capo vuole parlare: troppe assenze",
+              lowoutput: "Arrivano le sei, ma il lavoro è indietro",
+              burnout: "La giornata si spezza: troppa pressione",
+              collapse: "Energia a zero prima del traguardo",
+            },
+            stand:
+              "Una giornata in {n} pause - {totMin} minuti di stacco e {seen} viste dal capo.",
+          },
+          // Messages
+          workMsgs: [
+            "Lavori. L'obiettivo si avvicina (+{g}).",
+            "Task chiuso. Le spalle un po' più rigide.",
+            "Produci. Ma l'energia cala.",
+            "Avanti così - senza dimenticarti di respirare.",
+          ],
+          msgCaught: [
+            "Il capo ti guarda. Riposare resta un diritto.",
+            "Occhiata del capo. Ma stai meglio.",
+            "Vista la pausa. Ma ne avevi bisogno.",
+          ],
+          msgGlance: [
+            "Il capo era vicino. Pausa comunque meritata.",
+            "Un attimo tutto tuo - quasi inosservata.",
+          ],
+          msgSafe: [
+            "Respiri. Lo stress scende.",
+            "Una pausa fa bene: te la sei concessa.",
+            "Ti rimetti in pari.",
+            "Piccolo recupero. Riparti con la testa più chiara.",
+          ],
+          reactCaught: "Il capo ha notato la pausa.",
+          reactGlance: "Il capo era lì vicino.",
+          reactSafe: "Un momento per te. Il capo non c'era.",
+        },
+        en: {
+          challenge: "Oh, plot! · A challenge by Plot Twist Dataviz Lab",
+          theme: "June 2026",
+          heroTitle: "THE\nBREAK",
+          heroBody:
+            "A day at the office, 9 to 6. Work enough to satisfy the boss, but take the breaks you need to stay standing. <b>Rest is not a luxury.</b>",
+          card1Title: "One day, 09→18",
+          card1Body:
+            "Just today. Hit your work target by 6 pm - without burning out along the way.",
+          card2Title: "Breaks are good",
+          card2Body:
+            "A coffee, a walk, a chat: restore energy and lower stress. The boss doesn't always get it.",
+          card3Title: "Every break → a data point",
+          card3Body:
+            "At the end of the day your breaks become a <b>green dataviz</b>.",
+          startBtn: "Start the day →",
+          difficulty: "DIFFICULTY",
+          diff_facile: "Easy",
+          diff_normale: "Normal",
+          diff_difficile: "Hard",
+          // Tutorial
+          tutTitle: "How to play",
+          tut1T: "⌨ WORK · 60 min",
+          tut1B:
+            "Move toward your daily target. Each session drains energy and raises stress - but keeps the boss satisfied.",
+          tut2T: "☕ Take a break",
+          tut2B:
+            "Coffee, walks, snacks: restore energy and lower stress. Pick well - the boss has eyes everywhere.",
+          tut3T: "👀 The boss moves around",
+          tut3B:
+            "After each action the boss shifts: <i>in a meeting · at their desk · watching you</i>. Caught taking a break while watched means more disapproval.",
+          tut4T: "🏁 How to win (and lose)",
+          tut4B:
+            "Win by reaching 6 pm with your target met. Lose if energy collapses, stress explodes, the boss loses patience - or 6 pm arrives too soon.",
+          letsGo: "Let's go!",
+          // Play
+          meterE: "Energy",
+          meterS: "Stress",
+          meterD: "Boss disapproval",
+          meterL: "Work done",
+          bossAway: "☕ The boss is in a meeting.",
+          bossNearby: "🪑 The boss is at their desk.",
+          bossWatching: "👀 The boss is looking your way.",
+          bossWatchBubble: "👀 everything ok over there?",
+          bossTag: "THE BOSS",
+          youTag: "YOU",
+          greenHint: "↑ life is out there",
+          workBtn: "⌨ WORK",
+          workMin: " · 60 min",
+          logTitle: "⊟ BREAK LOG - your data",
+          logEmpty: "No breaks yet.\nWhen you take one,\nit ends up here.",
+          breakLabels: {
+            caffe: "Coffee",
+            passeggiata: "Walk",
+            bagno: "Bathroom",
+            chiacchiera: "Chat",
+            scroll: "Phone",
+            snack: "Snack",
+          },
+          lunchLabel: "Lunch break",
+          lunchReact:
+            "An hour to breathe. The boss doesn't count midday breaks.",
+          lunchMsg: "Break over. The afternoon begins.",
+          // Over
+          overTime: "TIME",
+          overPause: "BREAKS",
+          overWork: "WORK",
+          overVizBtn: "🌱 See your dataviz →",
+          overRestartBtn: "↺ Try the day again",
+          over: {
+            survived: {
+              title: "YOU MADE IT",
+              color: "#A6E22E",
+              bg: "#0E3B2E",
+              text: "18:00. Target met, still in one piece - work and rest, in balance. A day done right.",
+            },
+            fired: {
+              title: "THE BOSS WANTS A WORD",
+              color: "#E0653A",
+              bg: "#1A1714",
+              text: 'Too many absences from your desk. "I need to know I can count on you", they say. Next time, pace the breaks better - but don\'t give them up.',
+            },
+            lowoutput: {
+              title: "THE BOSS WANTS A WORD",
+              color: "#E0653A",
+              bg: "#1A1714",
+              text: "It's 6 pm and the work isn't done. \"We need to talk about your targets\", they say. Breaks matter, but the target needs closing.",
+            },
+            burnout: {
+              title: "BURNOUT",
+              color: "#E8C547",
+              bg: "#241f12",
+              text: "Too much pressure, too little breathing room. Your body shut down for you. The breaks were needed all along.",
+            },
+            collapse: {
+              title: "CRASHED OUT",
+              color: "#56C2D6",
+              bg: "#12222a",
+              text: "Energy at zero. The keyboard won. Maybe that snack should have come earlier.",
+            },
+          },
+          // Viz
+          vizSub: "OH, PLOT! · JUNE 2026",
+          vizTitle: "Anatomy of a day",
+          vizDesc:
+            "Every break is a small creature. The lower it sits, the later in the day.",
+          vizCount: "breaks recorded.",
+          backGame: "← back to game",
+          backResult: "← result",
+          vizEmpty: "No breaks to show yet.\nGo back and grab a coffee. ☕",
+          legendTitle: "HOW TO READ",
+          legendBreaks: "BREAK TYPE",
+          leg1: "The central circle = <b>duration</b> of the break",
+          leg2: "The <b>rays</b> = energy restored",
+          leg3: "The <b>halo</b> = calm restored",
+          leg4: "● boss was calm<br>○ boss noticed the break",
+          clockLabel: "TIME",
+          aboutBody:
+            '<b>Oh, plot!</b> is the monthly dataviz challenge organised by <b>Plot Twist Dataviz Lab</b>.<br> The June 2026 challenge theme is <b>"the break"</b>.',
+          aboutCredit:
+            "Plot Twist Dataviz Lab is a women-led project open to everyone",
+          aboutInsta: "Follow it on Instagram",
+
+          ed: {
+            paper: "The Office Courier",
+            edition: "evening edition",
+            chartTitle: "Energy falls, stress rises. Breaks turn it around.",
+            chartSub:
+              "Energy and stress levels (0-100) through the day. Purple bands mark breaks, grey ones work, the darkest the lunch break.",
+            legEnergy: "Energy",
+            legStress: "Stress",
+            legPause: "Break",
+            legWork: "Work",
+            legLunch: "Lunch break",
+            stripTitle: "The breaks, minute by minute",
+            stripNotNoticed: "break unnoticed",
+            stripNoticed: "break noticed by the boss",
+            stripColor: "· colour shows the break type",
+            barsTitle: "Minutes per break type",
+            statBreaks: "breaks in total",
+            statMinutes: "minutes away",
+            statSeen: "noticed by boss",
+            statExit: "clock-out time",
+            annPeak: "Most energy regained",
+            annEnd: "end of day",
+            head: {
+              survived: "Still standing at six, after {n} breaks",
+              fired: "The boss wants a word: too many absences",
+              lowoutput: "Six arrives, the work lags behind",
+              burnout: "The day breaks first: too much pressure",
+              collapse: "Energy hits zero before the finish",
+            },
+            stand:
+              "A day in {n} breaks - {totMin} minutes away from the desk, {seen} caught by the boss.",
+          },
+          // Messages
+          workMsgs: [
+            "Working. Target getting closer (+{g}).",
+            "Task closed. Shoulders a little stiffer.",
+            "Producing. But energy is draining.",
+            "Keep going - don't forget to breathe.",
+          ],
+          msgCaught: [
+            "The boss is watching. Rest is still your right.",
+            "Boss glance. But you feel better.",
+            "Break spotted. But you needed it.",
+          ],
+          msgGlance: [
+            "The boss was close. Still a deserved break.",
+            "A moment to yourself - barely noticed.",
+          ],
+          msgSafe: [
+            "You breathe. Stress drops.",
+            "A well-earned break.",
+            "Back in balance.",
+            "Small recovery. Clearer head.",
+          ],
+          reactCaught: "The boss noticed the break.",
+          reactGlance: "The boss was nearby.",
+          reactSafe: "A moment for you. The boss wasn't around.",
+        },
+      };
+
+      // ─── CONFIG ─────────────────────────────────────────────────────────────────
+      const TC = {
+        caffe: "#C08A57",
+        passeggiata: "#E8C547",
+        bagno: "#56C2D6",
+        chiacchiera: "#EE7DA6",
+        scroll: "#B79BF0",
+        snack: "#F2994A",
+        pranzo: "#C4956A",
+      };
+      const COL_ED = {
+        caffe: "#9B6B43",
+        passeggiata: "#7A8C4E",
+        bagno: "#4E7E92",
+        chiacchiera: "#B36A7E",
+        snack: "#C28A3E",
+        scroll: "#7E6FA0",
+      };
+      const ICONS = {
+        caffe: "☕",
+        passeggiata: "🚶",
+        bagno: "🚽",
+        chiacchiera: "💬",
+        scroll: "📱",
+        snack: "🍪",
+      };
+      const ACT = {
+        caffe: { durata: 10, e: 14, s: -8, notice: 0.8 },
+        passeggiata: { durata: 20, e: 22, s: -22, notice: 1.3 },
+        bagno: { durata: 8, e: 9, s: -11, notice: 0.5 },
+        chiacchiera: { durata: 15, e: 7, s: -16, notice: 1.1 },
+        scroll: { durata: 5, e: 3, s: -7, notice: 1.3 },
+        snack: { durata: 5, e: 16, s: -4, notice: 0.7 },
+      };
+      const ACT_ORDER = [
+        "caffe",
+        "passeggiata",
+        "bagno",
+        "chiacchiera",
+        "scroll",
+        "snack",
+      ];
+      const GREENS = {
+        forest: {
+          bg: "#0E3B2E",
+          panel: "#13503D",
+          ink: "#EAF3EC",
+          sub: "#7FAE97",
+          grid: "rgba(255,255,255,.13)",
+          label: "Deep Forest",
+        },
+        sage: {
+          bg: "#5E7A60",
+          panel: "#6E8A70",
+          ink: "#F4F8F2",
+          sub: "#D2E0CE",
+          grid: "rgba(255,255,255,.22)",
+          label: "Soft Sage",
+        },
+        lime: {
+          bg: "#A6E22E",
+          panel: "#B7ED4C",
+          ink: "#16320C",
+          sub: "#4A6B22",
+          grid: "rgba(0,0,0,.16)",
+          label: "Electric Lime",
+        },
+      };
+
+      // ─── STATE ───────────────────────────────────────────────────────────────────
+      let lang = "it";
+      let difficolta = "normale";
+      let state = fresh();
+
+      function fresh() {
+        return {
+          screen: "intro",
+          clock: 540,
+          energia: 63,
+          stress: 33,
+          produttivita: 0,
+          sospetto: 14,
+          boss: "nearby",
+          bossAngry: false,
+          hadLunch: false,
+          log: [],
+          series: [{ t: 540, e: 63, s: 33 }],
+          message:
+            "09:00. " +
+            _(
+              lang === "it"
+                ? "La giornata comincia. Respira."
+                : "The day begins. Breathe.",
+            ),
+          vizGreen: "forest",
+          over: null,
+        };
+      }
+      function _(s) {
+        return s;
+      } // identity, used below for clarity
+
+      function getSusMult() {
+        return difficolta === "facile"
+          ? 0.8
+          : difficolta === "difficile"
+            ? 1.55
+            : 1.15;
+      }
+      function getQuota() {
+        return difficolta === "facile"
+          ? 44
+          : difficolta === "difficile"
+            ? 90
+            : 63;
+      }
+      function clamp(v) {
+        return Math.max(0, Math.min(100, Math.round(v)));
+      }
+      function fmt(min) {
+        const h = Math.floor(min / 60),
+          m = min % 60;
+        return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+      }
+      function pick(a) {
+        return a[Math.floor(Math.random() * a.length)];
+      }
+      function L(key) {
+        return T[lang][key];
+      } // shorthand
+
+      function rollBoss(prev) {
+        const r = Math.random();
+        if (prev === "watching")
+          return r < 0.45 ? "nearby" : r < 0.8 ? "away" : "watching";
+        if (prev === "away")
+          return r < 0.45 ? "nearby" : r < 0.8 ? "watching" : "away";
+        return r < 0.4 ? "watching" : r < 0.75 ? "nearby" : "away";
+      }
+      function reactText(k) {
+        return k === "caught"
+          ? L("reactCaught")
+          : k === "glance"
+            ? L("reactGlance")
+            : L("reactSafe");
+      }
+      function reactColor(k) {
+        return k === "caught"
+          ? "#C0392B"
+          : k === "glance"
+            ? "#C98A1B"
+            : "#3F8F4F";
+      }
+      function workMsg(g) {
+        return pick(L("workMsgs")).replace("{g}", g);
+      }
+      function breakMsg(k, r) {
+        if (r === "caught") return pick(L("msgCaught"));
+        if (r === "glance") return pick(L("msgGlance"));
+        return pick(L("msgSafe"));
+      }
+
+      // ─── GAME LOGIC ──────────────────────────────────────────────────────────────
+      function doAction(key) {
+        if (state.over) return;
+        const work = key === "lavora",
+          a = ACT[key];
+        let {
+          energia,
+          stress,
+          produttivita,
+          sospetto,
+          clock,
+          boss,
+          log,
+          hadLunch,
+        } = state;
+        let message = "";
+        const reactKind =
+          state.boss === "watching"
+            ? "caught"
+            : state.boss === "nearby"
+              ? "glance"
+              : "safe";
+
+        if (work) {
+          const gain = Math.max(
+            2,
+            Math.round(19 * (energia / 100) * (1 - stress / 190)),
+          );
+          produttivita += gain;
+          energia = clamp(energia - 12);
+          stress = clamp(stress + 12);
+          sospetto = clamp(sospetto - 4);
+          clock += 60;
+          message = workMsg(gain);
+        } else {
+          energia = clamp(energia + a.e);
+          stress = clamp(stress + a.s);
+          const base =
+            state.boss === "watching" ? 28 : state.boss === "nearby" ? 13 : 4;
+          sospetto = clamp(sospetto + base * a.notice * getSusMult());
+          const lbl = L("breakLabels")[key];
+          const icon = {
+            caffe: "☕",
+            passeggiata: "🚶",
+            bagno: "🚽",
+            chiacchiera: "💬",
+            scroll: "📱",
+            snack: "🍪",
+          }[key];
+          log = [
+            ...log,
+            {
+              time: fmt(clock),
+              type: key,
+              label: lbl,
+              icon,
+              durata: a.durata,
+              reactKind,
+              reaction: reactText(reactKind),
+            },
+          ];
+          clock += a.durata;
+          message = breakMsg(key, reactKind);
+        }
+
+        // Auto-lunch 13:00→14:00, zero gameplay effect
+        if (clock >= 780 && !hadLunch) {
+          log = [
+            ...log,
+            {
+              time: "13:00",
+              type: "pranzo",
+              label: L("lunchLabel"),
+              icon: "🍽️",
+              durata: 60,
+              reactKind: "safe",
+              reaction: L("lunchReact"),
+              isLunch: true,
+            },
+          ];
+          clock = Math.max(clock, 840);
+          hadLunch = true;
+          message = L("lunchMsg");
+        }
+
+        boss = rollBoss(state.boss);
+        const bossAngry = sospetto > 58,
+          quota = getQuota();
+        let over = null,
+          screen = state.screen;
+        if (sospetto >= 100) over = "fired";
+        else if (stress >= 100) over = "burnout";
+        else if (energia <= 0) over = "collapse";
+        else if (clock >= 1080)
+          over = produttivita >= quota ? "survived" : "lowoutput";
+        if (over) screen = "over";
+
+        const series = [...state.series, { t: clock, e: energia, s: stress }];
+        Object.assign(state, {
+          energia,
+          stress,
+          produttivita,
+          sospetto,
+          clock,
+          boss,
+          bossAngry,
+          hadLunch,
+          log,
+          series,
+          message,
+          over,
+          screen,
+        });
+        render();
+      }
+
+      // ─── HELPERS ─────────────────────────────────────────────────────────────────
+      function meterFill(val, color, danger) {
+        const sh = danger ? `0 0 10px ${color}` : "none",
+          an = danger ? "paPulse 1.1s infinite" : "none";
+        return `<div class="meter-fill" style="width:${val}%;background:${color};box-shadow:${sh};animation:${an}"></div>`;
+      }
+      function getBossVars() {
+        const m = {
+          away: {
+            tf: "translateX(-46px) scale(.8)",
+            op: 0.42,
+            fil: "grayscale(.5)",
+            bar: "#E0D6C0",
+            ink: "#574F44",
+            lbl: L("bossAway"),
+          },
+          nearby: {
+            tf: "translateX(0) scale(.92)",
+            op: 0.85,
+            fil: "none",
+            bar: "#E8DAC0",
+            ink: "#574F44",
+            lbl: L("bossNearby"),
+          },
+          watching: {
+            tf: "translateX(8px) scale(1.02)",
+            op: 1,
+            fil: "none",
+            bar: "#C0392B",
+            ink: "#fff",
+            lbl: L("bossWatching"),
+          },
+        };
+        return m[state.boss];
+      }
+      function langToggle() {
+        return ["it", "en"]
+          .map((l) => {
+            const sel = l === lang;
+            return `<button data-action="lang:${l}" style="font-family:'Space Mono',monospace;font-size:11px;padding:4px 10px;border-radius:3px;cursor:pointer;border:2px solid #1A1714;background:${sel ? "#1A1714" : "transparent"};color:${sel ? "#EFE7D6" : "#574F44"};letter-spacing:.1em;transition:background .12s,color .12s">${l.toUpperCase()}</button>`;
+          })
+          .join("");
+      }
+      function diffBtns() {
+        return ["facile", "normale", "difficile"]
+          .map((d) => {
+            const sel = d === difficolta;
+            return `<button data-action="diff:${d}" style="font-family:'Space Mono',monospace;font-size:11px;padding:5px 11px;border-radius:3px;cursor:pointer;border:2px solid #1A1714;background:${sel ? "#1A1714" : "transparent"};color:${sel ? "#EFE7D6" : "#574F44"};transition:background .12s,color .12s">${L("diff_" + d)}</button>`;
+          })
+          .join("");
+      }
+
+      // ─── SCREEN: INTRO ───────────────────────────────────────────────────────────
+      function renderIntro() {
+        return `
+<div style="max-width:1000px;margin:0 auto;padding:clamp(12px,2.5vw,32px) 12px 40px;display:flex;flex-direction:column;gap:28px">
+
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+    <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#7A7060">
+      ${L("challenge")}<span style="margin:0 8px">·</span>${L("theme")}
+    </div>
+    <div style="display:flex;gap:6px">${langToggle()}</div>
+  </div>
+
+  <div style="display:flex;gap:40px;align-items:flex-end;flex-wrap:wrap;border-bottom:3px solid #1A1714;padding-bottom:24px">
+    <div style="flex:1;min-width:260px">
+      <h1 style="font-size:clamp(48px,9vw,104px);line-height:.9;margin:0;font-weight:700;letter-spacing:-.03em">${L("heroTitle").replace("\n", "<br>")}</h1>
+      <p style="font-size:clamp(15px,2vw,18px);line-height:1.5;max-width:34ch;color:#574F44;margin:18px 0 0;min-height:135px">${L("heroBody")}</p>
+    </div>
+    <div style="flex:1;min-width:240px;height:200px;position:relative;background:linear-gradient(#D9CDB4,#CFC2A6);border:3px solid #1A1714;border-radius:4px;overflow:hidden">
+      <div style="position:absolute;left:18px;top:18px;width:64px;height:48px;background:#3FA34D;border:3px solid #1A1714;border-radius:3px"></div>
+      <div style="position:absolute;left:18px;top:18px;width:64px;height:48px;border:3px solid #1A1714;border-radius:3px;background:repeating-linear-gradient(90deg,transparent 0 28px,#1A1714 28px 30px)"></div>
+      <div style="position:absolute;left:30px;bottom:14px;text-align:center;animation:paBob 3s ease-in-out infinite">
+        <div style="width:38px;height:34px;background:#C7553E;border:3px solid #1A1714;border-radius:3px;position:relative;margin:0 auto">
+          <div style="position:absolute;top:11px;left:7px;width:6px;height:6px;background:#1A1714;border-radius:50%"></div>
+          <div style="position:absolute;top:11px;right:7px;width:6px;height:6px;background:#1A1714;border-radius:50%"></div>
+        </div>
+        <div style="width:30px;height:30px;background:#3E4A5B;border:3px solid #1A1714;border-top:none;margin:-1px auto 0"></div>
+        <div style="font-family:'Space Mono',monospace;font-size:9px;margin-top:3px;color:#3a322a">${L("bossTag")}</div>
+      </div>
+      <div style="position:absolute;right:26px;bottom:14px;text-align:center">
+        <div style="width:30px;height:28px;background:#E8C547;border:3px solid #1A1714;border-radius:50% 50% 4px 4px;margin:0 auto"></div>
+        <div style="width:70px;height:10px;background:#6b5640;border:3px solid #1A1714;margin:6px auto 0"></div>
+        <div style="font-family:'Space Mono',monospace;font-size:9px;margin-top:3px;color:#3a322a">${L("youTag")}</div>
+      </div>
+      <div style="position:absolute;left:0;right:0;bottom:0;height:14px;background:#8a7355;border-top:3px solid #1A1714"></div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px">
+    <div style="border:2px solid #1A1714;border-radius:4px;padding:18px;background:#F7F1E3">
+      <div style="font-size:24px;margin-bottom:8px">🕘</div>
+      <div style="font-weight:600;margin-bottom:4px">${L("card1Title")}</div>
+      <div style="font-size:13px;line-height:1.45;color:#574F44">${L("card1Body")}</div>
+    </div>
+    <div style="border:2px solid #1A1714;border-radius:4px;padding:18px;background:#F7F1E3">
+      <div style="font-size:24px;margin-bottom:8px">🌿</div>
+      <div style="font-weight:600;margin-bottom:4px">${L("card2Title")}</div>
+      <div style="font-size:13px;line-height:1.45;color:#574F44">${L("card2Body")}</div>
+    </div>
+    <div style="border:2px solid #1A1714;border-radius:4px;padding:18px;background:#114A39;color:#EAF3EC">
+      <div style="font-size:24px;margin-bottom:8px">🌱</div>
+      <div style="font-weight:600;margin-bottom:4px">${L("card3Title")}</div>
+      <div style="font-size:13px;line-height:1.45;color:#A9CABA">${L("card3Body")}</div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+    <button data-action="start" class="start-btn" style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:600;background:#1A1714;color:#EFE7D6;border:none;border-radius:4px;padding:16px 32px;cursor:pointer;box-shadow:4px 4px 0 #9A6A3A;transition:transform .1s,box-shadow .1s">${L("startBtn")}</button>
+    <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+      <span style="font-family:'Space Mono',monospace;font-size:11px;color:#8A7E68;letter-spacing:.08em">${L("difficulty")}:</span>
+      ${diffBtns()}
+    </div>
+  </div>
+
+</div>`;
+      }
+
+      // ─── SCREEN: TUTORIAL ────────────────────────────────────────────────────────
+      function renderTutorial() {
+        return `
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:12px;background:#EFE7D6">
+  <div style="max-width:680px;width:100%;display:flex;flex-direction:column;gap:28px">
+
+    <div style="text-align:center">
+      <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.18em;color:#9A6A3A;margin-bottom:8px">LA PAUSA</div>
+      <h2 style="font-size:clamp(28px,5vw,44px);margin:0;font-weight:700;letter-spacing:-.02em">${L("tutTitle")}</h2>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      ${[
+        ["tut1T", "tut1B"],
+        ["tut2T", "tut2B"],
+        ["tut3T", "tut3B"],
+        ["tut4T", "tut4B"],
+      ]
+        .map(
+          ([tKey, bKey], i) => `
+      <div style="border:2px solid #1A1714;border-radius:4px;padding:18px 20px;background:#F7F1E3;display:flex;gap:14px;align-items:flex-start">
+        <div style="font-family:'Space Mono',monospace;font-size:22px;color:#9A6A3A;line-height:1;flex-shrink:0">${String(i + 1).padStart(2, "0")}</div>
+        <div>
+          <div style="font-weight:600;font-size:15px;margin-bottom:4px">${L(tKey)}</div>
+          <div style="font-size:13px;line-height:1.55;color:#574F44">${L(bKey)}</div>
+        </div>
+      </div>`,
+        )
+        .join("")}
+    </div>
+
+    <div style="display:flex;justify-content:center">
+      <button data-action="goPlay" style="font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;background:#1A1714;color:#EFE7D6;border:none;border-radius:4px;padding:18px 48px;cursor:pointer;box-shadow:4px 4px 0 #9A6A3A;transition:transform .1s,box-shadow .1s" class="start-btn">${L("letsGo")}</button>
+    </div>
+
+  </div>
+</div>`;
+      }
+
+      // ─── SCREEN: PLAY ────────────────────────────────────────────────────────────
+      function renderPlay() {
+        const s = state,
+          quota = getQuota(),
+          dayPct = Math.min(100, ((s.clock - 540) / 540) * 100);
+        const bv = getBossVars(),
+          watching = s.boss === "watching";
+
+        const meters = [
+          {
+            label: L("meterE"),
+            val: s.energia,
+            valText: String(s.energia),
+            color: "#3FA7C4",
+            danger: s.energia < 25,
+          },
+          {
+            label: L("meterS"),
+            val: s.stress,
+            valText: String(s.stress),
+            color: "#E0653A",
+            danger: s.stress > 70,
+          },
+          {
+            label: L("meterD"),
+            val: s.sospetto,
+            valText: String(s.sospetto),
+            color: "#C0392B",
+            danger: s.sospetto > 65,
+          },
+          {
+            label: L("meterL"),
+            val: Math.min(100, Math.round((s.produttivita / quota) * 100)),
+            valText: s.produttivita + "/" + quota,
+            color: "#5BA85B",
+            danger: false,
+          },
+        ];
+
+        const angryBrows = s.bossAngry
+          ? `<div style="position:absolute;top:6px;left:6px;width:13px;height:4px;background:#1A1714;transform:rotate(20deg)"></div><div style="position:absolute;top:6px;right:6px;width:13px;height:4px;background:#1A1714;transform:rotate(-20deg)"></div>`
+          : "";
+        const watchBubble = watching
+          ? `<div style="position:absolute;left:50%;top:-46px;transform:translateX(-50%);background:#fff;border:2px solid #C0392B;border-radius:6px;padding:3px 7px;font-family:'Space Mono',monospace;font-size:10px;color:#C0392B;font-weight:700;white-space:nowrap;animation:paPulse 1s infinite">${L("bossWatchBubble")}</div>`
+          : "";
+        const eyeLL = watching ? "18px" : "8px",
+          eyeRL = watching ? "30px" : "33px";
+
+        const logItems = [...s.log]
+          .slice(-12)
+          .reverse()
+          .map((e) => {
+            if (e.isLunch)
+              return `
+      <div style="display:flex;gap:9px;align-items:flex-start;font-family:'Space Mono',monospace;font-size:12px;border-top:1px dashed #B5A98E;border-bottom:1px dashed #B5A98E;padding:5px 0;margin:2px 0">
+        <span style="color:#8A7E68;flex-shrink:0">${e.time}</span>
+        <span style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-top:3px;flex-shrink:0;background:${TC.pranzo}"></span>
+        <div style="line-height:1.3;color:#8A7E68">${e.icon} ${e.label} · ${e.durata}m</div>
+      </div>`;
+            return `
+    <div style="display:flex;gap:9px;align-items:flex-start;font-family:'Space Mono',monospace;font-size:12px">
+      <span style="color:#8A7E68;flex-shrink:0">${e.time}</span>
+      <span style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-top:3px;flex-shrink:0;background:${TC[e.type]}"></span>
+      <div style="line-height:1.3"><span style="color:#1A1714">${e.icon} ${e.label} · ${e.durata}m</span><br><span style="color:${reactColor(e.reactKind)}">${e.reaction}</span></div>
+    </div>`;
+          })
+          .join("");
+
+        const breakBtns = ACT_ORDER.map((k) => {
+          const lbl = L("breakLabels")[k],
+            icon = {
+              caffe: "☕",
+              passeggiata: "🚶",
+              bagno: "🚽",
+              chiacchiera: "💬",
+              scroll: "📱",
+              snack: "🍪",
+            }[k];
+          return `<button data-action="break:${k}" class="break-btn" style="font-family:'Space Grotesk',sans-serif;background:#F7F1E3;border:2px solid #1A1714;border-radius:4px;padding:11px 10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;transition:background .12s,transform .12s">
+      <span style="font-size:22px;line-height:1">${icon}</span>
+      <span style="font-size:13px;font-weight:600">${lbl}</span>
+      <span style="font-family:'Space Mono',monospace;font-size:10px;color:#8A7E68">${ACT[k].durata} min</span>
+    </button>`;
+        }).join("");
+
+        return `
+<div style="max-width:1180px;margin:0 auto;padding:10px 10px 30px;display:flex;flex-direction:column;gap:14px">
+
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+    <div style="font-weight:700;letter-spacing:-.02em;font-size:20px">LA PAUSA</div>
+    <div style="text-align:center;font-family:'Space Mono',monospace">
+      <div style="font-size:22px;font-weight:700;line-height:1">${fmt(s.clock)}</div>
+      <div style="width:130px;height:5px;background:#E0D6C0;border-radius:3px;margin:4px 0 0;overflow:hidden"><div class="day-fill" style="width:${dayPct}%"></div></div>
+      <div style="font-size:9px;color:#8A7E68;letter-spacing:.1em;margin-top:3px">${L("clockLabel")}</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
+    ${meters
+      .map(
+        (m) => `
+    <div style="background:#F7F1E3;border:2px solid #1A1714;border-radius:4px;padding:9px 11px">
+      <div style="display:flex;justify-content:space-between;font-family:'Space Mono',monospace;font-size:11px;margin-bottom:5px;gap:6px"><span style="color:#574F44;letter-spacing:.03em">${m.label}</span><span style="font-weight:700">${m.valText}</span></div>
+      <div style="height:9px;background:#E0D6C0;border-radius:5px;overflow:hidden">${meterFill(m.val, m.color, m.danger)}</div>
+    </div>`,
+      )
+      .join("")}
+  </div>
+
+  <div style="display:flex;gap:14px;flex-wrap:wrap">
+    <div style="flex:1.6;min-width:300px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;letter-spacing:.04em;padding:8px 12px;border-radius:4px;background:${bv.bar};color:${bv.ink}">${bv.lbl}</div>
+
+      <div style="position:relative;height:300px;border:2px solid #1A1714;border-radius:4px;overflow:hidden;background:linear-gradient(#D6C9AF 0%,#D6C9AF 62%,#A98F6B 62%,#A98F6B 100%)">
+        <div style="position:absolute;left:22px;top:22px;width:120px;height:84px;background:#3FA34D;border:3px solid #1A1714;border-radius:3px"></div>
+        <div style="position:absolute;left:22px;top:22px;width:120px;height:84px;border:3px solid #1A1714;border-radius:3px;background:repeating-linear-gradient(0deg,transparent 0 40px,#1A1714 40px 43px),repeating-linear-gradient(90deg,transparent 0 56px,#1A1714 56px 59px)"></div>
+        <div style="position:absolute;left:14%;bottom:46px;text-align:center">
+          <div style="position:relative;transition:transform .5s cubic-bezier(.5,1.4,.5,1),opacity .5s,filter .5s;transform:${bv.tf};opacity:${bv.op};filter:${bv.fil}">
+            ${watchBubble}
+            <div style="position:relative;width:48px;height:42px;background:#C7553E;border:3px solid #1A1714;border-radius:3px;margin:0 auto">
+              ${angryBrows}
+              <div style="position:absolute;top:15px;width:7px;height:7px;background:#1A1714;border-radius:50%;left:${eyeLL};transition:left .4s"></div>
+              <div style="position:absolute;top:15px;width:7px;height:7px;background:#1A1714;border-radius:50%;left:${eyeRL};transition:left .4s"></div>
+            </div>
+            <div style="width:40px;height:36px;background:#3E4A5B;border:3px solid #1A1714;border-top:none;margin:-1px auto 0;position:relative"><div style="position:absolute;left:50%;top:0;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:14px solid #C0392B"></div></div>
+          </div>
+        </div>
+        <div style="position:absolute;right:8%;bottom:46px;text-align:center">
+          <div style="animation:paBob 4s ease-in-out infinite">
+            <div style="width:34px;height:32px;background:#E8C547;border:3px solid #1A1714;border-radius:50% 50% 5px 5px;margin:0 auto;position:relative">
+              <div style="position:absolute;top:13px;left:7px;width:5px;height:6px;background:#1A1714;border-radius:50%;animation:paBlink 5s infinite"></div>
+              <div style="position:absolute;top:13px;right:7px;width:5px;height:6px;background:#1A1714;border-radius:50%;animation:paBlink 5s infinite"></div>
+            </div>
+            <div style="width:30px;height:24px;background:#4F7CA8;border:3px solid #1A1714;border-top:none;margin:-1px auto 0"></div>
+          </div>
+          <div style="width:90px;height:12px;background:#6b5640;border:3px solid #1A1714;margin:2px auto 0;position:relative;z-index:2"></div>
+          <div style="width:48px;height:32px;background:#2b2b2b;border:3px solid #1A1714;border-radius:3px;margin:-46px auto 0;position:relative;left:-30px"><div style="width:100%;height:100%;background:#5b7d8c;border-radius:1px"></div></div>
+        </div>
+        <div style="position:absolute;right:4%;bottom:58px;width:16px;height:20px;background:#3FA34D;border:2px solid #1A1714;border-radius:50% 50% 2px 2px"></div>
+      </div>
+
+      <div style="min-height:20px;font-family:'Space Mono',monospace;font-size:13px;color:#574F44;font-style:italic">${s.message}</div>
+      <button data-action="lavora" class="work-btn" style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:600;background:#1A1714;color:#EFE7D6;border:none;border-radius:4px;padding:15px;cursor:pointer;width:100%;transition:opacity .15s">${L("workBtn")}<span style="font-family:'Space Mono',monospace;font-size:11px;opacity:.6;font-weight:400">${L("workMin")}</span></button>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px">${breakBtns}</div>
+    </div>
+
+    <div style="flex:1;min-width:240px;max-width:340px;background:#F7F1E3;border:2px solid #1A1714;border-radius:4px;padding:14px;display:flex;flex-direction:column">
+      <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.12em;color:#8A7E68;border-bottom:1px dashed #B5A98E;padding-bottom:8px;margin-bottom:10px">${L("logTitle")}</div>
+      ${
+        s.log.length > 0
+          ? `<div style="display:flex;flex-direction:column;gap:9px;overflow-y:auto;max-height:380px">${logItems}</div>`
+          : `<div style="font-family:'Space Mono',monospace;font-size:12px;color:#8A7E68;line-height:1.6">${L("logEmpty").replace("\n", "<br>")}</div>`
+      }
+    </div>
+  </div>
+</div>`;
+      }
+
+      // ─── SCREEN: GAME OVER ───────────────────────────────────────────────────────
+      function renderOver() {
+        const s = state,
+          oi = L("over")[s.over] || L("over").fired;
+        return `
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:${oi.bg}">
+  <div style="max-width:500px;width:100%;text-align:center">
+    <div class="pa-stamp" style="display:inline-block;border:5px solid ${oi.color};color:${oi.color};border-radius:8px;padding:10px 22px;font-weight:700;font-size:clamp(24px,6vw,44px);letter-spacing:-.02em;transform:rotate(-8deg)">${oi.title}</div>
+    <p style="font-size:17px;line-height:1.5;color:#EFE7D6;margin:34px auto 0;max-width:36ch">${oi.text}</p>
+    <div style="display:flex;gap:24px;justify-content:center;flex-wrap:wrap;margin:30px 0;font-family:'Space Mono',monospace;color:#EFE7D6">
+      <div><div style="font-size:30px;font-weight:700">${fmt(s.clock)}</div><div style="font-size:10px;letter-spacing:.1em;opacity:.7">${L("overTime")}</div></div>
+      <div><div style="font-size:30px;font-weight:700">${s.log.filter((e) => !e.isLunch).length}</div><div style="font-size:10px;letter-spacing:.1em;opacity:.7">${L("overPause")}</div></div>
+      <div><div style="font-size:30px;font-weight:700">${s.produttivita}/${getQuota()}</div><div style="font-size:10px;letter-spacing:.1em;opacity:.7">${L("overWork")}</div></div>
+    </div>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <button data-action="showViz" style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:600;background:#EFE7D6;color:#1A1714;border:none;border-radius:4px;padding:14px 24px;cursor:pointer">${L("overVizBtn")}</button>
+      <button data-action="restart" style="font-family:'Space Mono',monospace;font-size:13px;background:none;border:2px solid #EFE7D6;color:#EFE7D6;border-radius:4px;padding:13px 18px;cursor:pointer">${L("overRestartBtn")}</button>
+    </div>
+  </div>
+</div>`;
+      }
+
+      // ─── SCREEN: DATAVIZ (1a · editoriale) ───────────────────────────────────────
+      function poly(pts) {
+        if (!pts.length) return "";
+        return (
+          "M" + pts.map((p) => p.x.toFixed(1) + "," + p.y.toFixed(1)).join(" L")
+        );
+      }
+      function renderViz() {
+        const s = state,
+          G = GREENS[s.vizGreen] || GREENS.forest;
+        const breakLog = s.log.filter((e) => !e.isLunch),
+          n = breakLog.length;
+        const toMin = (t) => {
+          const [h, m] = t.split(":").map(Number);
+          return h * 60 + m;
+        };
+        const backLabel = state.over ? L("backResult") : L("backGame");
+        const ED = L("ed");
+        let dateStr;
+        try {
+          dateStr = new Date().toLocaleDateString(
+            lang === "it" ? "it-IT" : "en-US",
+            { day: "numeric", month: "long", year: "numeric" },
+          );
+        } catch (e) {
+          dateStr = lang === "it" ? "Giugno 2026" : "June 2026";
+        }
+
+        let paper;
+        if (n > 0) {
+          const breaks = breakLog
+            .map((e) => ({
+              t: toMin(e.time),
+              dur: e.durata,
+              type: e.type,
+              boss: e.reactKind,
+              e: ACT[e.type].e,
+              s: ACT[e.type].s,
+              time: e.time,
+            }))
+            .sort((a, b) => a.t - b.t);
+          const totMin = breaks.reduce((a, b) => a + b.dur, 0);
+          const seen = breaks.filter((b) => b.boss === "caught").length;
+          const series = (
+            s.series && s.series.length
+              ? s.series
+              : [{ t: 540, e: s.energia, s: s.stress }]
+          )
+            .slice()
+            .sort((a, b) => a.t - b.t);
+          const hadLunch = s.hadLunch;
+
+          // ── line chart geometry ──
+          const AL = 58,
+            AR = 976,
+            AT = 28,
+            AB = 328,
+            plotH = AB - AT;
+          const ax = (t) => AL + ((t - 540) / 540) * (AR - AL);
+          const ay = (v) => AT + (1 - v / 100) * plotH;
+          const energyPath = poly(
+            series.map((p) => ({ x: ax(p.t), y: ay(p.e) })),
+          );
+          const stressPath = poly(
+            series.map((p) => ({ x: ax(p.t), y: ay(p.s) })),
+          );
+          const grid = [0, 25, 50, 75, 100]
+            .map(
+              (v) =>
+                `<line x1="${AL}" y1="${ay(v).toFixed(1)}" x2="${AR}" y2="${ay(v).toFixed(1)}" stroke="${v === 0 ? "#C9BFA6" : "#EAE3D0"}" stroke-width="1"/><text x="${AL - 8}" y="${(ay(v) + 3.5).toFixed(1)}" text-anchor="end" style="font-family:'Space Mono',monospace;font-size:10px;fill:#A89A80">${v}</text>`,
+            )
+            .join("");
+          const hourTicks = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+            .map(
+              (h) =>
+                `<text x="${ax(h * 60).toFixed(1)}" y="350" text-anchor="middle" style="font-family:'Space Mono',monospace;font-size:10.5px;fill:#8A7E68">${h}</text>`,
+            )
+            .join("");
+          const LUNCH = [780, 840];
+          const pauseBands = breaks
+            .map((b) => {
+              const x0 = ax(b.t),
+                x1 = ax(b.t + b.dur);
+              return `<rect x="${x0.toFixed(1)}" y="22" width="${Math.max(3, x1 - x0).toFixed(1)}" height="306" fill="#9B7FC9" opacity="0.32"/>`;
+            })
+            .join("");
+          let wp = 540;
+          const work = [];
+          breaks.forEach((b) => {
+            if (b.t > wp) work.push([wp, b.t]);
+            wp = Math.max(wp, b.t + b.dur);
+          });
+          const lastT = series[series.length - 1].t;
+          if (wp < lastT) work.push([wp, lastT]);
+          const work2 = [];
+          work.forEach(([a, b]) => {
+            if (!hadLunch || b <= LUNCH[0] || a >= LUNCH[1]) {
+              work2.push([a, b]);
+            } else {
+              if (a < LUNCH[0]) work2.push([a, LUNCH[0]]);
+              if (b > LUNCH[1]) work2.push([LUNCH[1], b]);
+            }
+          });
+          const workBands = work2
+            .map(
+              (w) =>
+                `<rect x="${ax(w[0]).toFixed(1)}" y="22" width="${(ax(w[1]) - ax(w[0])).toFixed(1)}" height="306" fill="#D4CCBC" opacity="0.4"/>`,
+            )
+            .join("");
+          const lunchBand = hadLunch
+            ? `<rect x="${ax(LUNCH[0]).toFixed(1)}" y="22" width="${(ax(LUNCH[1]) - ax(LUNCH[0])).toFixed(1)}" height="306" fill="#A89E86" opacity="0.45"/><text x="${ax((LUNCH[0] + LUNCH[1]) / 2).toFixed(1)}" y="367" text-anchor="middle" style="font-family:'Source Sans 3',sans-serif;font-size:10px;font-style:italic;fill:#6B6354">${ED.legLunch}</text>`
+            : "";
+          const traceAt = (t, key) => {
+            for (let i = 0; i < series.length - 1; i++) {
+              if (series[i].t <= t && series[i + 1].t >= t) {
+                const f =
+                  (t - series[i].t) / (series[i + 1].t - series[i].t || 1);
+                return (
+                  series[i][key] + (series[i + 1][key] - series[i][key]) * f
+                );
+              }
+            }
+            return series[series.length - 1][key];
+          };
+          const annoBox = (px, py, l1, l2, right) => {
+            const above = py > 74,
+              anchor = right ? "end" : "start",
+              tx = right ? px - 6 : px + 6;
+            const y1 = above ? py - 38 : py + 24,
+              y2 = above ? py - 24 : py + 38,
+              ly = above ? py - 16 : py + 14;
+            return `<line x1="${px.toFixed(1)}" y1="${py.toFixed(1)}" x2="${px.toFixed(1)}" y2="${ly.toFixed(1)}" stroke="#1A1714" stroke-width="1"/><circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="3.4" fill="#1A1714"/><text x="${tx.toFixed(1)}" y="${y1.toFixed(1)}" text-anchor="${anchor}" style="font-family:'Source Serif 4',Georgia,serif;font-size:12px;fill:#1A1714;font-weight:700">${l1}</text><text x="${tx.toFixed(1)}" y="${y2.toFixed(1)}" text-anchor="${anchor}" style="font-family:'Source Sans 3',sans-serif;font-size:11px;fill:#574F44">${l2}</text>`;
+          };
+          let annos = "";
+          const morning = breaks.filter((b) => b.t < 780);
+          if (morning.length) {
+            const pk = morning.reduce((a, b) => (b.e > a.e ? b : a));
+            // only show the peak label if it won't collide with the end label
+            if (ax(lastT) - ax(pk.t) >= 235)
+              annos += annoBox(
+                ax(pk.t),
+                ay(traceAt(pk.t, "e")),
+                ED.annPeak,
+                L("breakLabels")[pk.type],
+                false,
+              );
+          }
+          annos += annoBox(
+            ax(lastT),
+            ay(series[series.length - 1].e),
+            fmt(lastT),
+            ED.annEnd,
+            true,
+          );
+          const chartSvg = `<svg viewBox="0 0 1000 380" style="width:100%;display:block;overflow:visible">${grid}${workBands}${lunchBand}${pauseBands}<path d="${stressPath}" fill="none" stroke="#C0392B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="${energyPath}" fill="none" stroke="#2D6E8E" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>${annos}${hourTicks}</svg>`;
+
+          // ── break strip ──
+          const SL = 20,
+            SR = 582,
+            sx = (t) => SL + ((t - 540) / 540) * (SR - SL);
+          const stripTicks = [9, 11, 13, 15, 17]
+            .map((h) => {
+              const x = sx(h * 60).toFixed(1);
+              return `<line x1="${x}" y1="74" x2="${x}" y2="82" stroke="#1A1714" stroke-width="1"/><text x="${x}" y="118" text-anchor="middle" style="font-family:'Space Mono',monospace;font-size:9px;fill:#8A7E68">${fmt(h * 60)}</text>`;
+            })
+            .join("");
+          const stripDots = breaks
+            .map((b) => {
+              const x = sx(b.t).toFixed(1),
+                r = (10 + b.dur * 0.5).toFixed(1),
+                notato = b.boss === "caught";
+              const tip =
+                'data-tip="' +
+                b.type +
+                "|" +
+                b.time +
+                "|" +
+                b.boss +
+                "|" +
+                b.e +
+                "|" +
+                b.s +
+                '"';
+              return `<circle cx="${x}" cy="78" r="${r}" fill="${COL_ED[b.type]}" stroke="${notato ? "#C0392B" : "#1A1714"}" stroke-width="${notato ? 2.2 : 1.2}" stroke-dasharray="${notato ? "3.5,2.5" : "0"}" ${tip} style="cursor:pointer"/>`;
+            })
+            .join("");
+
+          // ── bars: minutes per type ──
+          const minsByType = ACT_ORDER.map((k) => ({
+            k,
+            m: breaks
+              .filter((b) => b.type === k)
+              .reduce((a, b) => a + b.dur, 0),
+          }))
+            .filter((x) => x.m > 0)
+            .sort((a, b) => b.m - a.m);
+          const maxMin = Math.max(...minsByType.map((x) => x.m));
+          const bars = minsByType
+            .map(
+              (x) =>
+                `<div><div style="display:flex;justify-content:space-between;gap:8px;font-family:'Source Sans 3',sans-serif;font-size:12.5px;margin-bottom:4px"><span style="color:#3C352B;white-space:nowrap">${ICONS[x.k]} ${L("breakLabels")[x.k]}</span><span style="font-family:'Space Mono',monospace;color:#8A7E68">${x.m}′</span></div><div style="height:11px;background:#ECE5D3;border-radius:2px;overflow:hidden"><div style="height:100%;width:${Math.round((x.m / maxMin) * 100)}%;background:${COL_ED[x.k]};border-radius:2px"></div></div></div>`,
+            )
+            .join("");
+
+          const exitN = s.over === "survived" ? "18:00" : fmt(s.clock);
+          const stats = [
+            { n: String(n), label: ED.statBreaks, color: "#1A1714" },
+            { n: totMin + "′", label: ED.statMinutes, color: "#1A1714" },
+            { n: seen + " / " + n, label: ED.statSeen, color: "#C0392B" },
+            { n: exitN, label: ED.statExit, color: "#2D6E8E" },
+          ];
+          const statsHtml = stats
+            .map(
+              (st) =>
+                `<div><div style="font-family:'Source Serif 4',serif;font-weight:700;font-size:26px;line-height:1;color:${st.color}">${st.n}</div><div style="font-family:'Source Sans 3',sans-serif;font-size:11px;color:#6A6152;margin-top:3px;line-height:1.3">${st.label}</div></div>`,
+            )
+            .join("");
+
+          const head = (ED.head[s.over] || ED.head.survived).replace("{n}", n);
+          const stand = ED.stand
+            .replace("{n}", n)
+            .replace("{totMin}", totMin)
+            .replace("{seen}", seen);
+
+          paper = `<div style="background:#FBF9F3;border:1px solid #C9C0AC;border-radius:6px;box-shadow:0 18px 50px rgba(8,28,18,.4);padding:clamp(20px,4vw,42px)">
+      <div class="ed-mast" style="display:flex;justify-content:space-between;align-items:center;gap:16px;border-bottom:2px solid #1A1714;padding-bottom:12px;margin-bottom:4px">
+        <span style="flex:1;text-align:left;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.12em;color:#574F44">${dateStr}</span>
+        <span class="ed-paper-name" style="flex:0 0 auto;font-family:'Source Serif 4',Georgia,serif;font-weight:700;font-size:clamp(19px,3.4vw,36px);letter-spacing:-.01em;white-space:nowrap;color:#1A1714">${ED.paper}</span>
+        <span style="flex:1;text-align:right;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.12em;color:#574F44">${ED.edition}</span>
+      </div>
+      <h1 style="font-family:'Source Serif 4',Georgia,serif;font-weight:700;font-size:clamp(26px,4.6vw,48px);line-height:1.05;letter-spacing:-.015em;text-align:center;margin:18px auto 10px;max-width:20ch;color:${G.bg}">${head}</h1>
+      <p style="font-family:'Source Serif 4',Georgia,serif;font-size:clamp(15px,1.7vw,19px);line-height:1.5;text-align:center;color:#3C352B;max-width:62ch;margin:0 auto 4px">${stand}</p>
+      <hr style="border:none;border-top:1px solid #D8CFB8;margin:24px 0">
+      <div style="font-family:'Source Sans 3',sans-serif;font-weight:700;font-size:18px;margin-bottom:2px;color:#1A1714">${ED.chartTitle}</div>
+      <div style="font-family:'Source Sans 3',sans-serif;font-size:13.5px;color:#6A6152;margin-bottom:14px">${ED.chartSub}</div>
+      <div style="display:flex;gap:18px;margin-bottom:6px;font-family:'Source Sans 3',sans-serif;font-size:13px;font-weight:600;flex-wrap:wrap;color:#1A1714">
+        <span style="display:inline-flex;align-items:center;gap:7px"><span style="display:inline-block;width:22px;height:3px;background:#2D6E8E;border-radius:2px"></span>${ED.legEnergy}</span>
+        <span style="display:inline-flex;align-items:center;gap:7px"><span style="display:inline-block;width:22px;height:3px;background:#C0392B;border-radius:2px"></span>${ED.legStress}</span>
+        <span style="display:inline-flex;align-items:center;gap:7px;font-weight:500;color:#6A6152"><span style="display:inline-block;width:18px;height:13px;background:#C7B6E4;border-radius:2px"></span>${ED.legPause}</span>
+        <span style="display:inline-flex;align-items:center;gap:7px;font-weight:500;color:#6A6152"><span style="display:inline-block;width:18px;height:13px;background:#D4CCBC;border-radius:2px"></span>${ED.legWork}</span>
+        ${hadLunch ? `<span style="display:inline-flex;align-items:center;gap:7px;font-weight:500;color:#6A6152"><span style="display:inline-block;width:18px;height:13px;background:#BBB199;border-radius:2px"></span>${ED.legLunch}</span>` : ""}
+      </div>
+      ${chartSvg}
+      <hr style="border:none;border-top:1px solid #D8CFB8;margin:26px 0 22px">
+      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:32px" class="ed-lower">
+        <div style="display:flex;flex-direction:column">
+          <div style="font-family:'Source Sans 3',sans-serif;font-weight:700;font-size:16px;color:#1A1714">${ED.stripTitle}</div>
+          <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+            <svg viewBox="0 0 600 130" style="width:100%;display:block;overflow:visible"><line x1="20" y1="78" x2="582" y2="78" stroke="#1A1714" stroke-width="1.5"/>${stripTicks}${stripDots}</svg>
+            <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;font-family:'Source Sans 3',sans-serif;font-size:12px;color:#574F44;align-items:center">
+              <span style="display:inline-flex;align-items:center;gap:7px"><svg width="20" height="20"><circle cx="10" cy="10" r="7" fill="#B8AE98" stroke="#1A1714" stroke-width="1.2"/></svg>${ED.stripNotNoticed}</span>
+              <span style="display:inline-flex;align-items:center;gap:7px"><svg width="20" height="20"><circle cx="10" cy="10" r="7" fill="#B8AE98" stroke="#C0392B" stroke-width="2.2" stroke-dasharray="3.5,2.5"/></svg>${ED.stripNoticed}</span>
+              <span style="color:#8A7E68">${ED.stripColor}</span>
+            </div>
+          </div>
+        </div>
+        <div style="border-left:1px solid #D8CFB8;padding-left:28px" class="ed-bars">
+          <div style="font-family:'Source Sans 3',sans-serif;font-weight:700;font-size:16px;margin-bottom:12px;color:#1A1714">${ED.barsTitle}</div>
+          <div style="display:flex;flex-direction:column;gap:10px">${bars}</div>
+          <div style="margin-top:22px;border-top:1px solid #1A1714;padding-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:14px 10px">${statsHtml}</div>
+        </div>
+      </div>
+    </div>`;
+        } else {
+          paper = `<div style="background:#FBF9F3;border:1px solid #C9C0AC;border-radius:6px;box-shadow:0 18px 50px rgba(8,28,18,.4);padding:clamp(28px,5vw,52px);text-align:center">
+      <div style="font-family:'Source Serif 4',Georgia,serif;font-weight:700;font-size:clamp(24px,4vw,38px);color:#1A1714;margin-bottom:10px">${ED.paper}</div>
+      <div style="font-family:'Space Mono',monospace;font-size:13px;color:#8A7E68;line-height:1.7">${L("vizEmpty").replace("\n", "<br>")}</div>
+    </div>`;
+        }
+
+        return `
+<div style="min-height:100vh;padding:clamp(10px,2vw,24px);background:${G.bg};color:${G.ink};font-family:'Space Grotesk',sans-serif">
+  <div style="max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.18em;color:${G.sub}">${L("vizSub")}</div>
+      <button data-action="backToPlay" style="font-family:'Space Mono',monospace;font-size:13px;background:transparent;border:2px solid ${G.ink};color:${G.ink};border-radius:4px;padding:11px 16px;cursor:pointer;white-space:nowrap">${backLabel}</button>
+    </div>
+    ${paper}
+    <div style="border-top:1px solid ${G.grid};padding-top:20px;margin-top:8px">
+      <div style="font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.15em;color:${G.sub};margin-bottom:10px;text-transform:uppercase">Oh, plot!</div>
+      <p style="font-size:13px;line-height:1.65;color:${G.ink};max-width:62ch;margin:0 0 10px;font-family:'Space Grotesk',sans-serif">${L("aboutBody")}</p>
+      <div style="font-size:11px;font-family:'Space Mono',monospace;color:${G.sub};line-height:1.6">${L("aboutCredit")}</div>
+      <a href="https://www.instagram.com/plottwist_datavizlab/" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:7px;margin-top:10px;font-size:11px;font-family:'Space Mono',monospace;color:${G.ink};text-decoration:none;border-bottom:1px solid ${G.grid};padding-bottom:1px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${G.ink}" stroke-width="2" style="flex-shrink:0"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="${G.ink}" stroke="none"/></svg>
+        ${L("aboutInsta")} · @plottwist_datavizlab
+      </a>
+    </div>
+  </div>
+</div>`;
+      }
+
+      // ─── RENDER ──────────────────────────────────────────────────────────────────
+      function render() {
+        const app = document.getElementById("app");
+        switch (state.screen) {
+          case "intro":
+            app.innerHTML = renderIntro();
+            break;
+          case "tutorial":
+            app.innerHTML = renderTutorial();
+            break;
+          case "play":
+            app.innerHTML = renderPlay();
+            break;
+          case "over":
+            app.innerHTML = renderOver();
+            break;
+          case "viz":
+            app.innerHTML = renderViz();
+            break;
+        }
+      }
+
+      // ─── EVENTS ──────────────────────────────────────────────────────────────────
+      document.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-action]");
+        if (!btn) return;
+        const action = btn.dataset.action;
+        if (action === "start") {
+          state.screen = "tutorial";
+          render();
+        } else if (action === "goPlay") {
+          state.screen = "play";
+          render();
+        } else if (action === "showViz") {
+          state.screen = "viz";
+          render();
+        } else if (action === "backToPlay") {
+          state.screen = state.over ? "over" : "play";
+          render();
+        } else if (action === "restart") {
+          state = fresh();
+          render();
+        } else if (action === "lavora") {
+          doAction("lavora");
+        } else if (action.startsWith("break:")) {
+          doAction(action.slice(6));
+        } else if (action.startsWith("setGreen:")) {
+          state.vizGreen = action.slice(9);
+          render();
+        } else if (action.startsWith("diff:")) {
+          difficolta = action.slice(5);
+          render();
+        } else if (action.startsWith("lang:")) {
+          lang = action.slice(5);
+          state.message =
+            lang === "it"
+              ? "09:00. La giornata comincia. Respira."
+              : "09:00. The day begins. Breathe.";
+          render();
+        }
+      });
+
+      // ─── TOOLTIP ─────────────────────────────────────────────────────────────────
+      const vtip = document.getElementById("vtip");
+      const tipIcons = {
+        caffe: "☕",
+        passeggiata: "🚶",
+        bagno: "🚽",
+        chiacchiera: "💬",
+        scroll: "📱",
+        snack: "🍪",
+      };
+      function showTip(data, x, y) {
+        const [type, time, rk, e, s] = data.split("|");
+        const lbl = (L("breakLabels") || {})[type] || type;
+        const icon = tipIcons[type] || "";
+        const rkTxt =
+          rk === "caught"
+            ? L("reactCaught")
+            : rk === "glance"
+              ? L("reactGlance")
+              : L("reactSafe");
+        const rkCol =
+          rk === "caught" ? "#E05C3A" : rk === "glance" ? "#E8C547" : "#7FAE97";
+        vtip.innerHTML =
+          '<div style="font-weight:600;margin-bottom:5px">' +
+          icon +
+          " " +
+          lbl +
+          ' <span style="opacity:.5;font-weight:400">· ' +
+          time +
+          "</span></div>" +
+          '<div style="font-size:11px;color:' +
+          rkCol +
+          ';margin-bottom:7px">' +
+          rkTxt +
+          "</div>" +
+          '<div style="font-size:12px;opacity:.72">' +
+          (lang === "it" ? "Energia" : "Energy") +
+          ": +" +
+          e +
+          "<br>" +
+          (lang === "it" ? "Stress" : "Stress") +
+          ": " +
+          s +
+          "</div>";
+        vtip.style.display = "block";
+        posTip(x, y);
+      }
+      function posTip(x, y) {
+        // body has `zoom`, which scales fixed children: convert viewport px → local px
+        const z = parseFloat(getComputedStyle(document.body).zoom) || 1;
+        const w = (vtip.offsetWidth || 210) * z,
+          h = (vtip.offsetHeight || 90) * z;
+        let R = x + 12,
+          T = y + 12;
+        if (R + w > window.innerWidth - 8) R = x - 12 - w;
+        if (T + h > window.innerHeight - 8) T = y - 12 - h;
+        vtip.style.left = Math.max(6, R) / z + "px";
+        vtip.style.top = Math.max(6, T) / z + "px";
+      }
+      function hideTip() {
+        vtip.style.display = "none";
+      }
+      document.addEventListener("mouseover", (e) => {
+        const el = e.target.closest("[data-tip]");
+        if (el) showTip(el.dataset.tip, e.clientX, e.clientY);
+        else hideTip();
+      });
+      document.addEventListener("mousemove", (e) => {
+        if (vtip.style.display === "block") posTip(e.clientX, e.clientY);
+      });
+      document.addEventListener("mouseout", (e) => {
+        if (!e.relatedTarget || !e.relatedTarget.closest("[data-tip]"))
+          hideTip();
+      });
+
+      // ─── INIT ────────────────────────────────────────────────────────────────────
+      render();
+    </script>
+  </body>
+</html>
