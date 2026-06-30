@@ -129,6 +129,24 @@
           white-space: normal !important;
           font-size: 24px !important;
         }
+        /* compact break buttons during the game */
+        .break-grid {
+          grid-template-columns: repeat(3, 1fr) !important;
+          gap: 7px !important;
+        }
+        .break-grid .break-btn {
+          padding: 7px 3px !important;
+          gap: 2px !important;
+        }
+        .break-grid .break-btn span:nth-child(1) {
+          font-size: 18px !important;
+        }
+        .break-grid .break-btn span:nth-child(2) {
+          font-size: 11px !important;
+        }
+        .break-grid .break-btn span:nth-child(3) {
+          font-size: 9px !important;
+        }
       }
     </style>
   </head>
@@ -1101,7 +1119,7 @@
 
       <div style="min-height:20px;font-family:'Space Mono',monospace;font-size:13px;color:#574F44;font-style:italic">${s.message}</div>
       <button data-action="lavora" class="work-btn" style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:600;background:#1A1714;color:#EFE7D6;border:none;border-radius:4px;padding:15px;cursor:pointer;width:100%;transition:opacity .15s">${L("workBtn")}<span style="font-family:'Space Mono',monospace;font-size:11px;opacity:.6;font-weight:400">${L("workMin")}</span></button>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px">${breakBtns}</div>
+      <div class="break-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px">${breakBtns}</div>
     </div>
 
     <div style="flex:1;min-width:240px;max-width:340px;background:#F7F1E3;border:2px solid #1A1714;border-radius:4px;padding:14px;display:flex;flex-direction:column">
@@ -1189,48 +1207,17 @@
             .slice()
             .sort((a, b) => a.t - b.t);
           const hadLunch = s.hadLunch;
+          const isMobile = window.matchMedia("(max-width: 700px)").matches;
 
-          // ── line chart geometry ──
-          const AL = 58,
-            AR = 976,
-            AT = 28,
-            AB = 328,
-            plotH = AB - AT;
-          const ax = (t) => AL + ((t - 540) / 540) * (AR - AL);
-          const ay = (v) => AT + (1 - v / 100) * plotH;
-          const energyPath = poly(
-            series.map((p) => ({ x: ax(p.t), y: ay(p.e) })),
-          );
-          const stressPath = poly(
-            series.map((p) => ({ x: ax(p.t), y: ay(p.s) })),
-          );
-          const grid = [0, 25, 50, 75, 100]
-            .map(
-              (v) =>
-                `<line x1="${AL}" y1="${ay(v).toFixed(1)}" x2="${AR}" y2="${ay(v).toFixed(1)}" stroke="${v === 0 ? "#C9BFA6" : "#EAE3D0"}" stroke-width="1"/><text x="${AL - 8}" y="${(ay(v) + 3.5).toFixed(1)}" text-anchor="end" style="font-family:'Space Mono',monospace;font-size:10px;fill:#A89A80">${v}</text>`,
-            )
-            .join("");
-          const hourTicks = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
-            .map(
-              (h) =>
-                `<text x="${ax(h * 60).toFixed(1)}" y="350" text-anchor="middle" style="font-family:'Space Mono',monospace;font-size:10.5px;fill:#8A7E68">${h}</text>`,
-            )
-            .join("");
+          // ── shared time-space prep ──
           const LUNCH = [780, 840];
-          const pauseBands = breaks
-            .map((b) => {
-              const x0 = ax(b.t),
-                x1 = ax(b.t + b.dur);
-              return `<rect x="${x0.toFixed(1)}" y="22" width="${Math.max(3, x1 - x0).toFixed(1)}" height="306" fill="#9B7FC9" opacity="0.32"/>`;
-            })
-            .join("");
+          const lastT = series[series.length - 1].t;
           let wp = 540;
           const work = [];
           breaks.forEach((b) => {
             if (b.t > wp) work.push([wp, b.t]);
             wp = Math.max(wp, b.t + b.dur);
           });
-          const lastT = series[series.length - 1].t;
           if (wp < lastT) work.push([wp, lastT]);
           const work2 = [];
           work.forEach(([a, b]) => {
@@ -1241,15 +1228,6 @@
               if (b > LUNCH[1]) work2.push([LUNCH[1], b]);
             }
           });
-          const workBands = work2
-            .map(
-              (w) =>
-                `<rect x="${ax(w[0]).toFixed(1)}" y="22" width="${(ax(w[1]) - ax(w[0])).toFixed(1)}" height="306" fill="#D4CCBC" opacity="0.4"/>`,
-            )
-            .join("");
-          const lunchBand = hadLunch
-            ? `<rect x="${ax(LUNCH[0]).toFixed(1)}" y="22" width="${(ax(LUNCH[1]) - ax(LUNCH[0])).toFixed(1)}" height="306" fill="#A89E86" opacity="0.45"/><text x="${ax((LUNCH[0] + LUNCH[1]) / 2).toFixed(1)}" y="367" text-anchor="middle" style="font-family:'Source Sans 3',sans-serif;font-size:10px;font-style:italic;fill:#6B6354">${ED.legLunch}</text>`
-            : "";
           const traceAt = (t, key) => {
             for (let i = 0; i < series.length - 1; i++) {
               if (series[i].t <= t && series[i + 1].t >= t) {
@@ -1262,46 +1240,160 @@
             }
             return series[series.length - 1][key];
           };
-          const annoBox = (px, py, l1, l2, right) => {
-            const above = py > 74,
-              anchor = right ? "end" : "start",
-              tx = right ? px - 6 : px + 6;
-            const y1 = above ? py - 38 : py + 24,
-              y2 = above ? py - 24 : py + 38,
-              ly = above ? py - 16 : py + 14;
-            return `<line x1="${px.toFixed(1)}" y1="${py.toFixed(1)}" x2="${px.toFixed(1)}" y2="${ly.toFixed(1)}" stroke="#1A1714" stroke-width="1"/><circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="3.4" fill="#1A1714"/><text x="${tx.toFixed(1)}" y="${y1.toFixed(1)}" text-anchor="${anchor}" style="font-family:'Source Serif 4',Georgia,serif;font-size:12px;fill:#1A1714;font-weight:700">${l1}</text><text x="${tx.toFixed(1)}" y="${y2.toFixed(1)}" text-anchor="${anchor}" style="font-family:'Source Sans 3',sans-serif;font-size:11px;fill:#574F44">${l2}</text>`;
-          };
-          let annos = "";
           const morning = breaks.filter((b) => b.t < 780);
-          if (morning.length) {
-            const pk = morning.reduce((a, b) => (b.e > a.e ? b : a));
-            // only show the peak label if it won't collide with the end label
-            if (ax(lastT) - ax(pk.t) >= 235)
-              annos += annoBox(
-                ax(pk.t),
-                ay(traceAt(pk.t, "e")),
-                ED.annPeak,
-                L("breakLabels")[pk.type],
-                false,
-              );
+
+          let chartSvg;
+          if (isMobile) {
+            // ── vertical chart: value across, time flowing DOWN ──
+            const W = 340,
+              H = 824,
+              PL = 46,
+              PR = 298,
+              PT = 50,
+              PB = 784;
+            const vx = (v) => PL + (v / 100) * (PR - PL);
+            const ty = (t) => PT + ((t - 540) / 540) * (PB - PT);
+            const energyPath = poly(
+              series.map((p) => ({ x: vx(p.e), y: ty(p.t) })),
+            );
+            const stressPath = poly(
+              series.map((p) => ({ x: vx(p.s), y: ty(p.t) })),
+            );
+            const grid = [0, 25, 50, 75, 100]
+              .map(
+                (v) =>
+                  `<line x1="${vx(v).toFixed(1)}" y1="${PT}" x2="${vx(v).toFixed(1)}" y2="${PB}" stroke="${v === 0 ? "#C9BFA6" : "#EAE3D0"}" stroke-width="1"/><text x="${vx(v).toFixed(1)}" y="${PT - 12}" text-anchor="middle" style="font-family:'Space Mono',monospace;font-size:16px;fill:#A89A80">${v}</text>`,
+              )
+              .join("");
+            const hourTicks = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+              .map(
+                (h) =>
+                  `<text x="${PL - 10}" y="${(ty(h * 60) + 6).toFixed(1)}" text-anchor="end" style="font-family:'Space Mono',monospace;font-size:16px;fill:#8A7E68">${h}</text>`,
+              )
+              .join("");
+            const pauseBands = breaks
+              .map((b) => {
+                const y0 = ty(b.t),
+                  y1 = ty(b.t + b.dur);
+                return `<rect x="${PL}" y="${y0.toFixed(1)}" width="${PR - PL}" height="${Math.max(3, y1 - y0).toFixed(1)}" fill="#9B7FC9" opacity="0.32"/>`;
+              })
+              .join("");
+            const workBands = work2
+              .map(
+                (w) =>
+                  `<rect x="${PL}" y="${ty(w[0]).toFixed(1)}" width="${PR - PL}" height="${(ty(w[1]) - ty(w[0])).toFixed(1)}" fill="#D4CCBC" opacity="0.4"/>`,
+              )
+              .join("");
+            const lunchBand = hadLunch
+              ? `<rect x="${PL}" y="${ty(LUNCH[0]).toFixed(1)}" width="${PR - PL}" height="${(ty(LUNCH[1]) - ty(LUNCH[0])).toFixed(1)}" fill="#A89E86" opacity="0.45"/><text x="${PR - 8}" y="${(ty((LUNCH[0] + LUNCH[1]) / 2) + 5).toFixed(1)}" text-anchor="end" style="font-family:'Source Sans 3',sans-serif;font-size:13px;font-style:italic;fill:#6B6354">${ED.legLunch}</text>`
+              : "";
+            const annoV = (px, py, l1, l2) => {
+              const left = px > (PL + PR) / 2,
+                anchor = left ? "end" : "start",
+                tx = left ? px - 12 : px + 12;
+              return `<line x1="${px.toFixed(1)}" y1="${py.toFixed(1)}" x2="${(left ? px - 9 : px + 9).toFixed(1)}" y2="${py.toFixed(1)}" stroke="#1A1714" stroke-width="1"/><circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="3.8" fill="#1A1714"/><text x="${tx.toFixed(1)}" y="${(py - 4).toFixed(1)}" text-anchor="${anchor}" style="font-family:'Source Serif 4',Georgia,serif;font-size:15px;fill:#1A1714;font-weight:700">${l1}</text><text x="${tx.toFixed(1)}" y="${(py + 13).toFixed(1)}" text-anchor="${anchor}" style="font-family:'Source Sans 3',sans-serif;font-size:13px;fill:#574F44">${l2}</text>`;
+            };
+            let annos = "";
+            if (morning.length) {
+              const pk = morning.reduce((a, b) => (b.e > a.e ? b : a));
+              if (ty(lastT) - ty(pk.t) >= 64)
+                annos += annoV(
+                  vx(traceAt(pk.t, "e")),
+                  ty(pk.t),
+                  ED.annPeak,
+                  L("breakLabels")[pk.type],
+                );
+            }
+            annos += annoV(
+              vx(series[series.length - 1].e),
+              ty(lastT),
+              fmt(lastT),
+              ED.annEnd,
+            );
+            chartSvg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block;overflow:visible"><line x1="${PL}" y1="${PT}" x2="${PL}" y2="${PB}" stroke="#C9BFA6" stroke-width="1"/>${grid}${workBands}${lunchBand}${pauseBands}<path d="${stressPath}" fill="none" stroke="#C0392B" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="${energyPath}" fill="none" stroke="#2D6E8E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${annos}${hourTicks}</svg>`;
+          } else {
+            // ── horizontal chart: time flowing RIGHT (desktop) ──
+            const AL = 58,
+              AR = 976,
+              AT = 28,
+              AB = 328,
+              plotH = AB - AT;
+            const ax = (t) => AL + ((t - 540) / 540) * (AR - AL);
+            const ay = (v) => AT + (1 - v / 100) * plotH;
+            const energyPath = poly(
+              series.map((p) => ({ x: ax(p.t), y: ay(p.e) })),
+            );
+            const stressPath = poly(
+              series.map((p) => ({ x: ax(p.t), y: ay(p.s) })),
+            );
+            const grid = [0, 25, 50, 75, 100]
+              .map(
+                (v) =>
+                  `<line x1="${AL}" y1="${ay(v).toFixed(1)}" x2="${AR}" y2="${ay(v).toFixed(1)}" stroke="${v === 0 ? "#C9BFA6" : "#EAE3D0"}" stroke-width="1"/><text x="${AL - 8}" y="${(ay(v) + 3.5).toFixed(1)}" text-anchor="end" style="font-family:'Space Mono',monospace;font-size:10px;fill:#A89A80">${v}</text>`,
+              )
+              .join("");
+            const hourTicks = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+              .map(
+                (h) =>
+                  `<text x="${ax(h * 60).toFixed(1)}" y="350" text-anchor="middle" style="font-family:'Space Mono',monospace;font-size:10.5px;fill:#8A7E68">${h}</text>`,
+              )
+              .join("");
+            const pauseBands = breaks
+              .map((b) => {
+                const x0 = ax(b.t),
+                  x1 = ax(b.t + b.dur);
+                return `<rect x="${x0.toFixed(1)}" y="22" width="${Math.max(3, x1 - x0).toFixed(1)}" height="306" fill="#9B7FC9" opacity="0.32"/>`;
+              })
+              .join("");
+            const workBands = work2
+              .map(
+                (w) =>
+                  `<rect x="${ax(w[0]).toFixed(1)}" y="22" width="${(ax(w[1]) - ax(w[0])).toFixed(1)}" height="306" fill="#D4CCBC" opacity="0.4"/>`,
+              )
+              .join("");
+            const lunchBand = hadLunch
+              ? `<rect x="${ax(LUNCH[0]).toFixed(1)}" y="22" width="${(ax(LUNCH[1]) - ax(LUNCH[0])).toFixed(1)}" height="306" fill="#A89E86" opacity="0.45"/><text x="${ax((LUNCH[0] + LUNCH[1]) / 2).toFixed(1)}" y="367" text-anchor="middle" style="font-family:'Source Sans 3',sans-serif;font-size:10px;font-style:italic;fill:#6B6354">${ED.legLunch}</text>`
+              : "";
+            const annoBox = (px, py, l1, l2, right) => {
+              const above = py > 74,
+                anchor = right ? "end" : "start",
+                tx = right ? px - 6 : px + 6;
+              const y1 = above ? py - 38 : py + 24,
+                y2 = above ? py - 24 : py + 38,
+                ly = above ? py - 16 : py + 14;
+              return `<line x1="${px.toFixed(1)}" y1="${py.toFixed(1)}" x2="${px.toFixed(1)}" y2="${ly.toFixed(1)}" stroke="#1A1714" stroke-width="1"/><circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="3.4" fill="#1A1714"/><text x="${tx.toFixed(1)}" y="${y1.toFixed(1)}" text-anchor="${anchor}" style="font-family:'Source Serif 4',Georgia,serif;font-size:12px;fill:#1A1714;font-weight:700">${l1}</text><text x="${tx.toFixed(1)}" y="${y2.toFixed(1)}" text-anchor="${anchor}" style="font-family:'Source Sans 3',sans-serif;font-size:11px;fill:#574F44">${l2}</text>`;
+            };
+            let annos = "";
+            if (morning.length) {
+              const pk = morning.reduce((a, b) => (b.e > a.e ? b : a));
+              if (ax(lastT) - ax(pk.t) >= 235)
+                annos += annoBox(
+                  ax(pk.t),
+                  ay(traceAt(pk.t, "e")),
+                  ED.annPeak,
+                  L("breakLabels")[pk.type],
+                  false,
+                );
+            }
+            annos += annoBox(
+              ax(lastT),
+              ay(series[series.length - 1].e),
+              fmt(lastT),
+              ED.annEnd,
+              true,
+            );
+            chartSvg = `<svg viewBox="0 0 1000 380" style="width:100%;display:block;overflow:visible">${grid}${workBands}${lunchBand}${pauseBands}<path d="${stressPath}" fill="none" stroke="#C0392B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="${energyPath}" fill="none" stroke="#2D6E8E" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>${annos}${hourTicks}</svg>`;
           }
-          annos += annoBox(
-            ax(lastT),
-            ay(series[series.length - 1].e),
-            fmt(lastT),
-            ED.annEnd,
-            true,
-          );
-          const chartSvg = `<svg viewBox="0 0 1000 380" style="width:100%;display:block;overflow:visible">${grid}${workBands}${lunchBand}${pauseBands}<path d="${stressPath}" fill="none" stroke="#C0392B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="${energyPath}" fill="none" stroke="#2D6E8E" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>${annos}${hourTicks}</svg>`;
 
           // ── break strip ──
           const SL = 20,
             SR = 582,
             sx = (t) => SL + ((t - 540) / 540) * (SR - SL);
+          const stripFont = isMobile ? 17 : 9;
           const stripTicks = [9, 11, 13, 15, 17]
             .map((h) => {
               const x = sx(h * 60).toFixed(1);
-              return `<line x1="${x}" y1="74" x2="${x}" y2="82" stroke="#1A1714" stroke-width="1"/><text x="${x}" y="118" text-anchor="middle" style="font-family:'Space Mono',monospace;font-size:9px;fill:#8A7E68">${fmt(h * 60)}</text>`;
+              return `<line x1="${x}" y1="74" x2="${x}" y2="82" stroke="#1A1714" stroke-width="1"/><text x="${x}" y="${isMobile ? 124 : 118}" text-anchor="middle" style="font-family:'Space Mono',monospace;font-size:${stripFont}px;fill:#8A7E68">${fmt(h * 60)}</text>`;
             })
             .join("");
           const stripDots = breaks
@@ -1564,6 +1656,20 @@
       document.addEventListener("mouseout", (e) => {
         if (!e.relatedTarget || !e.relatedTarget.closest("[data-tip]"))
           hideTip();
+      });
+
+      // re-render the dataviz when crossing the mobile breakpoint (chart flips orientation)
+      let _wasMobile = window.matchMedia("(max-width: 700px)").matches,
+        _rzT;
+      window.addEventListener("resize", () => {
+        clearTimeout(_rzT);
+        _rzT = setTimeout(() => {
+          const m = window.matchMedia("(max-width: 700px)").matches;
+          if (m !== _wasMobile) {
+            _wasMobile = m;
+            if (state.screen === "viz") render();
+          }
+        }, 180);
       });
 
       // ─── INIT ────────────────────────────────────────────────────────────────────
